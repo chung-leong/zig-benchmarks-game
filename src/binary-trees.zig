@@ -5,7 +5,7 @@ const TreeNode = struct {
     l: ?*TreeNode,
     r: ?*TreeNode,
 
-    pub fn new(a: *Allocator, l: ?*TreeNode, r: ?*TreeNode) !*TreeNode {
+    pub fn new(a: Allocator, l: ?*TreeNode, r: ?*TreeNode) !*TreeNode {
         var node = try a.create(TreeNode);
         node.l = l;
         node.r = r;
@@ -26,7 +26,7 @@ fn itemCheck(node: *TreeNode) usize {
     }
 }
 
-fn bottomUpTree(a: *Allocator, depth: usize) Allocator.Error!*TreeNode {
+fn bottomUpTree(a: Allocator, depth: usize) Allocator.Error!*TreeNode {
     if (depth > 0) {
         const left = try bottomUpTree(a, depth - 1);
         const right = try bottomUpTree(a, depth - 1);
@@ -37,7 +37,7 @@ fn bottomUpTree(a: *Allocator, depth: usize) Allocator.Error!*TreeNode {
     }
 }
 
-fn deleteTree(a: *Allocator, node: *TreeNode) void {
+fn deleteTree(a: Allocator, node: *TreeNode) void {
     if (node.l) |left| {
         // either have both nodes or none
         deleteTree(a, left);
@@ -70,7 +70,7 @@ pub fn main() !void {
     const long_lived_tree = try bottomUpTree(allocator, max_depth);
     var depth = min_depth;
     while (depth <= max_depth) : (depth += 2) {
-        var iterations = @floatToInt(usize, std.math.pow(f32, 2, @intToFloat(f32, max_depth - depth + min_depth)));
+        var iterations = @as(usize, @intFromFloat(std.math.pow(f32, 2, @as(f32, @floatFromInt(max_depth - depth + min_depth)))));
         var check: usize = 0;
 
         var i: usize = 1;

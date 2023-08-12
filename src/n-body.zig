@@ -16,7 +16,7 @@ const Planet = struct {
 fn advance(bodies: []Planet, dt: f64, steps: usize) void {
     var i: usize = 0;
     while (i < steps) : (i += 1) {
-        for (bodies) |*bi, j| {
+        for (bodies, 0..) |*bi, j| {
             for (bodies[j + 1 ..]) |*bj| {
                 const dx = bi.x - bj.x;
                 const dy = bi.y - bj.y;
@@ -48,7 +48,7 @@ fn advance(bodies: []Planet, dt: f64, steps: usize) void {
 fn energy(bodies: []const Planet) f64 {
     var e: f64 = 0.0;
 
-    for (bodies) |bi, i| {
+    for (bodies, 0..) |bi, i| {
         e += 0.5 * (bi.vx * bi.vx + bi.vy * bi.vy + bi.vz * bi.vz) * bi.mass;
 
         for (bodies[i + 1 ..]) |bj| {
@@ -135,7 +135,7 @@ const solar_bodies = [_]Planet{
 
 var buffer: [256]u8 = undefined;
 var fixed_allocator = std.heap.FixedBufferAllocator.init(buffer[0..]);
-var allocator = &fixed_allocator.allocator;
+var allocator = fixed_allocator.allocator();
 
 pub fn main() !void {
     var buffered_stdout = std.io.bufferedWriter(std.io.getStdOut().writer());

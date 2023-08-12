@@ -2,7 +2,7 @@ const std = @import("std");
 
 var buffer: [256]u8 = undefined;
 var fixed_allocator = std.heap.FixedBufferAllocator.init(buffer[0..]);
-var allocator = &fixed_allocator.allocator;
+var allocator = fixed_allocator.allocator();
 
 pub fn main() !void {
     var buffered_stdout = std.io.bufferedWriter(std.io.getStdOut().writer());
@@ -26,8 +26,8 @@ pub fn main() !void {
     while (y < h) : (y += 1) {
         var x: usize = 0;
         while (x < w) : (x += 1) {
-            const cr = 2.0 * @intToFloat(f64, x) / @intToFloat(f64, w) - 1.5;
-            const ci = 2.0 * @intToFloat(f64, y) / @intToFloat(f64, h) - 1.0;
+            const cr = 2.0 * @as(f64, @floatFromInt(x)) / @as(f64, @floatFromInt(w)) - 1.5;
+            const ci = 2.0 * @as(f64, @floatFromInt(y)) / @as(f64, @floatFromInt(h)) - 1.0;
 
             var zr: f64 = 0.0;
             var zi: f64 = 0.0;

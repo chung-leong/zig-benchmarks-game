@@ -54,7 +54,7 @@ fn process(buf: []u8, ifrom: usize, ito: usize) void {
 }
 
 var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-var allocator = &gpa.allocator;
+var allocator = gpa.allocator();
 
 pub fn main() !void {
     var buffered_stdout = std.io.bufferedWriter(std.io.getStdOut().writer());

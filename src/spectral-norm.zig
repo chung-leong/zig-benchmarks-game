@@ -1,7 +1,7 @@
 const std = @import("std");
 
 fn eval_a(i: usize, j: usize) f64 {
-    return 1.0 / @intToFloat(f64, (i + j) * (i + j + 1) / 2 + i + 1);
+    return 1.0 / @as(f64, @floatFromInt((i + j) * (i + j + 1) / 2 + i + 1));
 }
 
 fn eval_a_times_u(comptime transpose: bool, au: []f64, u: []const f64) void {
@@ -30,7 +30,7 @@ fn eval_ata_times_u(atau: []f64, u: []const f64, scratch: []f64) void {
 }
 
 var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-var allocator = &gpa.allocator;
+var allocator = gpa.allocator();
 
 pub fn main() !void {
     var buffered_stdout = std.io.bufferedWriter(std.io.getStdOut().writer());

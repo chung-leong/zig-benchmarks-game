@@ -8,7 +8,7 @@ const ic = 29573;
 var seed: u32 = 42;
 fn nextRandom(max: f64) f64 {
     seed = (seed * ia + ic) % im;
-    return max * @intToFloat(f64, seed) / @intToFloat(f64, im);
+    return max * @as(f64, @floatFromInt(seed)) / @as(f64, @floatFromInt(im));
 }
 
 const AminoAcid = struct {
@@ -18,7 +18,7 @@ const AminoAcid = struct {
 
 fn repeatAndWrap(out: anytype, comptime sequence: []const u8, count: usize) void {
     var padded_sequence: [sequence.len + max_line_length]u8 = undefined;
-    for (padded_sequence) |*e, i| {
+    for (&padded_sequence, 0..) |*e, i| {
         e.* = sequence[i % sequence.len];
     }
 
@@ -26,7 +26,7 @@ fn repeatAndWrap(out: anytype, comptime sequence: []const u8, count: usize) void
     var idx: usize = 0;
     while (idx < count) {
         const rem = count - idx;
-        const line_length = std.math.min(@as(usize, max_line_length), rem);
+        const line_length = @min(@as(usize, max_line_length), rem);
 
         _ = out.write(padded_sequence[off .. off + line_length]) catch unreachable;
         _ = out.writeByte('\n') catch unreachable;
@@ -42,7 +42,7 @@ fn repeatAndWrap(out: anytype, comptime sequence: []const u8, count: usize) void
 fn generateAndWrap(out: anytype, comptime nucleotides: []const AminoAcid, count: usize) void {
     var cum_prob: f64 = 0;
     var cum_prob_total: [nucleotides.len]f64 = undefined;
-    for (nucleotides) |n, i| {
+    for (nucleotides, 0..) |n, i| {
         cum_prob += n.p;
         cum_prob_total[i] = cum_prob * im;
     }
@@ -53,7 +53,7 @@ fn generateAndWrap(out: anytype, comptime nucleotides: []const AminoAcid, count:
     var idx: usize = 0;
     while (idx < count) {
         const rem = count - idx;
-        const line_length = std.math.min(@as(usize, max_line_length), rem);
+        const line_length = @min(@as(usize, max_line_length), rem);
 
         for (line[0..line_length]) |*col| {
             const r = nextRandom(im);
@@ -76,7 +76,7 @@ fn generateAndWrap(out: anytype, comptime nucleotides: []const AminoAcid, count:
 
 var buffer: [256]u8 = undefined;
 var fixed_allocator = std.heap.FixedBufferAllocator.init(buffer[0..]);
-var allocator = &fixed_allocator.allocator;
+var allocator = fixed_allocator.allocator();
 
 pub fn main() !void {
     var buffered_stdout = std.io.bufferedWriter(std.io.getStdOut().writer());

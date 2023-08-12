@@ -2,7 +2,7 @@ const std = @import("std");
 
 var buffer: [2048]u8 = undefined;
 var fixed_allocator = std.heap.FixedBufferAllocator.init(buffer[0..]);
-var allocator = &fixed_allocator.allocator;
+var allocator = fixed_allocator.allocator();
 
 pub fn main() !void {
     var buffered_stdout = std.io.bufferedWriter(std.io.getStdOut().writer());
@@ -22,7 +22,7 @@ pub fn main() !void {
     var perm_count: usize = 0;
     var checksum: isize = 0;
 
-    for (perm1) |*e, i| {
+    for (perm1, 0..) |*e, i| {
         e.* = i;
     }
 
@@ -33,7 +33,7 @@ pub fn main() !void {
                 count[r - 1] = r;
             }
 
-            for (perm) |_, i| {
+            for (perm, 0..) |_, i| {
                 perm[i] = perm1[i];
             }
 
@@ -53,11 +53,11 @@ pub fn main() !void {
                 flips_count += 1;
             }
 
-            max_flips_count = std.math.max(max_flips_count, flips_count);
+            max_flips_count = @max(max_flips_count, flips_count);
             if (perm_count % 2 == 0) {
-                checksum += @intCast(isize, flips_count);
+                checksum += @as(isize, @intCast(flips_count));
             } else {
-                checksum -= @intCast(isize, flips_count);
+                checksum -= @as(isize, @intCast(flips_count));
             }
 
             while (true) : (r += 1) {

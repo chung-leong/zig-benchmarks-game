@@ -17,7 +17,7 @@ fn kvLessThan(_: void, lhs: HashMap.KV, rhs: HashMap.KV) bool {
     return lhs.key < rhs.key;
 }
 
-fn generateFrequenciesForLength(allocator: *std.mem.Allocator, poly: []const u8, comptime desired_length: usize, output: []u8) !void {
+fn generateFrequenciesForLength(allocator: std.mem.Allocator, poly: []const u8, comptime desired_length: usize, output: []u8) !void {
     var hash = HashMap.init(allocator);
     defer hash.deinit();
 
@@ -48,28 +48,28 @@ fn generateFrequenciesForLength(allocator: *std.mem.Allocator, poly: []const u8,
         i += 1;
     }
 
-    std.sort.sort(HashMap.KV, list, {}, kvLessThan);
+    std.sort.heap(HashMap.KV, list, {}, kvLessThan);
 
     var position: usize = 0;
     for (list) |*entry| {
         var olig: [desired_length]u8 = undefined;
 
-        for (olig) |*e, j| {
-            const shift = @intCast(u6, 2 * (olig.len - j - 1));
-            e.* = nucleotideForCode(@truncate(u8, entry.key >> shift));
+        for (&olig, 0..) |*e, j| {
+            const shift = @as(u6, @intCast(2 * (olig.len - j - 1)));
+            e.* = nucleotideForCode(@as(u8, @truncate(entry.key >> shift)));
         }
 
         const slice = try std.fmt.bufPrint(
             output[position..],
             "{s} {d:.3}\n",
-            .{ olig[0..], 100.0 * @intToFloat(f64, entry.value) / @intToFloat(f64, poly.len - desired_length + 1) },
+            .{ olig[0..], 100.0 * @as(f64, @floatFromInt(entry.value)) / @as(f64, @floatFromInt(poly.len - desired_length + 1)) },
         );
         position += slice.len;
         output[position] = 0;
     }
 }
 
-fn generateCount(allocator: *std.mem.Allocator, poly: []const u8, comptime olig: []const u8, output: []u8) !void {
+fn generateCount(allocator: std.mem.Allocator, poly: []const u8, comptime olig: []const u8, output: []u8) !void {
     var hash = HashMap.init(allocator);
     defer hash.deinit();
 
@@ -93,7 +93,7 @@ fn generateCount(allocator: *std.mem.Allocator, poly: []const u8, comptime olig:
     {
         var key: u64 = 0;
 
-        for (olig) |_, i| {
+        for (olig, 0..) |_, i| {
             key = ((key << 2) & mask) | codeForNucleotide(olig[i]);
         }
 
@@ -130,18 +130,18 @@ pub fn main() !void {
         }
     }
 
-    const poly_shrunk = poly.toOwnedSlice();
+    const poly_shrunk = try poly.toOwnedSlice();
 
     const counts = [_]u8{ 1, 2 };
     const entries = [_][]const u8{ "GGT", "GGTA", "GGTATT", "GGTATTTTAATT", "GGTATTTTAATTTATAGT" };
 
     var output: [counts.len + entries.len][4096]u8 = undefined;
 
-    inline for (counts) |count, i| {
+    inline for (counts, 0..) |count, i| {
         try generateFrequenciesForLength(allocator, poly_shrunk, count, output[i][0..]);
     }
 
-    inline for (entries) |entry, i| {
+    inline for (entries, 0..) |entry, i| {
         try generateCount(allocator, poly_shrunk, entry, output[i + counts.len][0..]);
     }
 

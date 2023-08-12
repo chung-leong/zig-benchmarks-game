@@ -1,6 +1,5 @@
 const std = @import("std");
 const builtin = @import("builtin");
-const Builder = std.build.Builder;
 
 const build_path = "build";
 const build_path_c = "ref/build";
@@ -66,23 +65,26 @@ const targets = [_]Target{
 };
 
 const CreateDirStep = struct {
-    const Step = std.build.Step;
-
-    step: Step,
-    builder: *Builder,
+    step: std.Build.Step,
+    builder: *std.Build,
     dir_path: []const u8,
     allow_existing: bool,
 
-    pub fn init(builder: *Builder, dir_path: []const u8, allow_existing: bool) CreateDirStep {
+    pub fn init(builder: *std.Build, dir_path: []const u8, allow_existing: bool) CreateDirStep {
         return CreateDirStep{
             .builder = builder,
-            .step = Step.init(.custom, builder.fmt("CreateDir {s}", .{dir_path}), builder.allocator, make),
+            .step = std.Build.Step.init(.{
+                .id = .custom,
+                .name = builder.fmt("CreateDir {s}", .{dir_path}),
+                .owner = builder,
+                .makeFn = make,
+            }),
             .dir_path = dir_path,
             .allow_existing = allow_existing,
         };
     }
 
-    fn make(step: *Step) !void {
+    fn make(step: *std.Build.Step, _: *std.Progress.Node) !void {
         const self = @fieldParentPtr(CreateDirStep, "step", step);
 
         const full_path = self.builder.pathFromRoot(self.dir_path);
@@ -90,30 +92,31 @@ const CreateDirStep = struct {
             if (self.allow_existing and err == error.PathAlreadyExists) {
                 return;
             }
-
-            std.debug.warn("Unable to create {s}: {s}\n", .{ full_path, @errorName(err) });
+            std.debug.print("Unable to create {s}: {s}\n", .{ full_path, @errorName(err) });
             return err;
         };
     }
 };
 
-fn addCreateDirStep(self: *Builder, dir_path: []const u8, allow_existing: bool) *CreateDirStep {
+fn addCreateDirStep(self: *std.Build, dir_path: []const u8, allow_existing: bool) *CreateDirStep {
     const create_dir_step = self.allocator.create(CreateDirStep) catch unreachable;
     create_dir_step.* = CreateDirStep.init(self, dir_path, allow_existing);
     return create_dir_step;
 }
 
-pub fn build(b: *Builder) !void {
+pub fn build(b: *std.Build) !void {
     const create_build_dir = addCreateDirStep(b, build_path, true);
     const create_build_c_dir = addCreateDirStep(b, build_path_c, true);
 
     inline for (targets) |target| {
         // Zig Target
         {
-            const exe = b.addExecutable(target.name, "src/" ++ target.name ++ ".zig");
-            exe.setBuildMode(.ReleaseFast);
+            const exe = b.addExecutable(.{
+                .name = target.name,
+                .root_source_file = .{ .path = "src/" ++ target.name ++ ".zig" },
+                .optimize = .ReleaseFast,
+            });
             exe.step.dependOn(&create_build_dir.step);
-            exe.setOutputDir(build_path);
 
             if (target.libs) |libs| {
                 var it = std.mem.split(u8, libs, " ");
@@ -122,12 +125,16 @@ pub fn build(b: *Builder) !void {
                 }
             }
 
-            b.default_step.dependOn(&exe.step);
+            const artifact = b.addInstallArtifact(exe);
+            artifact.dest_dir = .{ .custom = build_path };
+            b.default_step.dependOn(&artifact.step);
         }
 
         // C Target
         {
-            const exe = b.addExecutable(target.name, null);
+            const exe = b.addExecutable(.{
+                .name = target.name,
+            });
 
             var cflags = std.ArrayList([]const u8).init(b.allocator);
             defer cflags.deinit();
@@ -138,9 +145,8 @@ pub fn build(b: *Builder) !void {
             }
 
             exe.addCSourceFile("ref/" ++ target.name ++ ".c", cflags.items);
-            exe.addIncludeDir("ref/include");
+            exe.addIncludePath("ref/include");
             exe.step.dependOn(&create_build_c_dir.step);
-            exe.setOutputDir(build_path_c);
 
             if (target.libs) |libs| {
                 var it = std.mem.split(u8, libs, " ");
@@ -152,7 +158,9 @@ pub fn build(b: *Builder) !void {
                 exe.linkSystemLibrary("c");
             }
 
-            b.default_step.dependOn(&exe.step);
+            const artifact = b.addInstallArtifact(exe);
+            artifact.dest_dir = .{ .custom = build_path_c };
+            b.default_step.dependOn(&artifact.step);
         }
     }
 

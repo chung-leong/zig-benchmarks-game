@@ -13,7 +13,7 @@ fn extractDigit(nth: usize) usize {
     c.mpz_add(tmp2, tmp1, acc);
     c.mpz_tdiv_q(tmp1, tmp2, den);
 
-    return @intCast(usize, c.mpz_get_si(tmp1));
+    return @as(usize, @intCast(c.mpz_get_si(tmp1)));
 }
 
 fn eliminateDigit(d: usize) void {
@@ -33,7 +33,7 @@ fn nextTerm(k: usize) void {
 
 var buffer: [256]u8 = undefined;
 var fixed_allocator = std.heap.FixedBufferAllocator.init(buffer[0..]);
-var allocator = &fixed_allocator.allocator;
+var allocator = fixed_allocator.allocator();
 
 pub fn main() !void {
     var buffered_stdout = std.io.bufferedWriter(std.io.getStdOut().writer());
@@ -65,7 +65,7 @@ pub fn main() !void {
             continue;
         }
 
-        try stdout.print("{c}", .{@intCast(u8, '0' + d)});
+        try stdout.print("{c}", .{@as(u8, @intCast('0' + d))});
         i += 1;
         if (i % 10 == 0) {
             try stdout.print("\t:{}\n", .{i});

@@ -55,9 +55,9 @@ pub fn main() !void {
 
             max_flips_count = @max(max_flips_count, flips_count);
             if (perm_count % 2 == 0) {
-                checksum += @as(isize, @intCast(flips_count));
+                checksum += @intCast(flips_count);
             } else {
-                checksum -= @as(isize, @intCast(flips_count));
+                checksum -= @intCast(flips_count);
             }
 
             while (true) : (r += 1) {
